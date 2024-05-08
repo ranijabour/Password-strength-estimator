@@ -1,0 +1,299 @@
+\documentclass[5p,twocolumn]{elsarticle}
+\usepackage{graphicx} % Required for inserting images
+\title{Technical Report - Personalized Data-Driven Password Meter}
+\author{Goni Cohen, Assaf Ben Yona, Rani Gabour}
+\date{September 2023}
+\begin{document}
+\begin{abstract}
+%% ABSTRACT
+We introduce PPESrank (Personalized PESrank), a password strength estimator that models password guessing likelihood like a powerful password cracker. The model utilizes the user's country to enhance its guessing ability, leveraging existing data of leaked passwords. Our Python implementation exhibited similar response times and slightly higher accuracy compared to PESrank. Additionally, we developed a website featuring country-specific categorization and the scor enhancements, as detailed in our user-study section.
+
+\end{abstract}
+\maketitle
+\section{Introduction}
+\label{introduction}
+Passwords serve as the most common method of authentication across the internet [1]. This extensive reliance on passwords highlights their significant role in security. However, people tend to create easily guessable password patterns, often opting for what's most memorable. This behavior makes individuals vulnerable to successful password guessing attacks, undermining the security and effectiveness of passwords. This susceptibility poses a privacy risk and underscores the pressing need for precise password strength assessment tools.
+
+In the realm of password strength evaluation, ongoing endeavors aim to enhance the reliability of current solutions for safeguarding passwords. There's been continuous development of various methods and models to address the issue of password vulnerability [2]. Our project is centered on the enhancement of the existing PESrank model [3], which accurately and efficiently estimates password strength.
+
+Ur et al showed a platform dedicated to password enhancement. We adapted the feedback from their site, tailoring it to suit our model. Beyond that, we recognized and addressed several gaps in their research, specifically concerning the website's design and password recommendations. The impact of our refinements could be assessed in subsequent studies password strength.
+\section{Related Work}
+\label{Related Work}
+\subsection{\textbf{Password Estimation Tools}}
+Ur et al presents a data-informed password strength evaluator and illustrates its effectiveness in aiding users to create more robust and memorable passwords. This is accomplished by providing users with data-driven, actionable guidance on improving their candidate passwords. The foundation of their password strength evaluator is a neural network that has been trained on a substantial collection of passwords. 
+\begin{figure}[h]
+	\centering 
+	\includegraphics[width=0.4\textwidth]{password-meter.png}	
+	\caption{A suggested improvement for “Helloworld!,”
+with changes in magenta.} 
+	\label{fig_mom0}%
+\end{figure}
+Additionally, Mori et al reveal that users from different countries vary in the word categories they choose and the methods they use to modify these words [2]. Consequently, considering the linguistic background of the user, these inherent disparities in password creation among users from diverse language spheres can be exploited by attackers to increase their chances of guessing passwords. This assertion has been demonstrated through the utilization of a neural network that has been trained on leaked passwords from users who are probably using the same language. 
+
+\subsubsection{\textbf{PESrank Model}}
+"An Explainable Online Password Strength Estimator" (Wool, David, 2016) [3] introduces a novel password strength assessment tool called PESrank, which accurately models the operations of a potent password-cracking mechanism. PESrank computes the rank of a given password within an optimal descending order of likelihood. The model treats every password as a point within a 5-dimensional search space. 
+
+\begin{itemize}
+    \item \textbf{offline training phase} - PESrank processes the training set's passwords and generates five probability distribution lists, which are saved in separate files. This process involves breaking down each password into five components: prefix, base word, suffix, capitalization, and leet transformations. Each of these components is stored in a file using a format that consists of pairs in the form of {value, probability}. After obtaining these d = 5 probability distributions, employ the ESrank algorithm to generate two arrays, denoted as L1 and L2, which represent the upper and lower rank bounds.\item \textbf{online test step} -  Given a password, the model divides it into five segments, as previously mentioned, and its likelihood is calculated by multiplying the probabilities of each sub-password, provided they exist in the dataset.
+
+\[\textbf{Consider}: P(prefix) = P_1,\ P(base word) = P_2,
+\]
+\[P(suffix) = P_3, P(capital) = P_4,\ P(L3tt) = P_5\]
+\[\textbf{Then}: P(password) = P_1\bullet\ P_2\bullet\ P_3\bullet\ P_4\bullet\ P_5\]
+Finally, PESrank applies the rank estimation algorithm, ESrank, that receives the password probability and outputs upper and lower bounds for the rank. 
+\end{itemize}
+
+Moreover, PESrank is efficiently tweakable to allow model personalization in fractions of a second, without the need to retrain the model.
+\subsection{\textbf{Password composition process}}
+Data-driven meters with detailed feedback lead users to create more secure, but no less memorable, passwords than meters with only a bar as a strength indicator, as shown in the research by Ur et al [1]. One of the goals of our project is to provide feedback to users that will help them remember their passwords better, in contrast to the findings of Ur et al, which indicated no improvement in password recall. It's important to note that, despite the availability of password generators, many users still prefer to choose their passwords themselves, indicating a preference for personal memorability over sheer strength [2], as indicated in \textbf{Figure 2}. 
+\begin{figure}[h]
+	\centering 
+	\includegraphics[width=0.4\textwidth]{creation.png}
+ \caption{Preferences of users regarding password creation}
+	\label{fig_mom0}%
+\end{figure}
+Due to the limitations of human memory, user-generated passwords are often far from truly random [1], [4], [5], as human users tend to select weaker passwords because they are easier to remember. Recognizing these limitations in human memory, our feedback aims to offer users stronger passwords that are still memorable, striking a balance between user preferences and password security. 
+
+Moreover, the outcomes of the study conducted by Ur et al revealed an interesting trend: while a substantial portion of users acknowledged the usefulness of the new passwords offered to them, only a small fraction integrated these suggestions into their password choices. However, users chose to draw inspiration from the offer, so we think that a more personal offer to users will lead them to actually use the password we offered. Drawing from the idea of enhancing users' existing passwords rather than entirely replacing them, which was positively received by some users, we encountered a challenge. Some users expressed concerns about using this tool because they were worried about forgetting the modified password. Consequently, we decided to provide password suggestions based on their personal information to address this issue. In addition, given the limited uptake of our recommended password among users, we aimed to elucidate the password construction process. By detailing the enhancements made at each step, we hope users can partially incorporate our suggestions, ensuring they achieve a sufficiently robust password.
+Finally, our various the scor decisions were determined based on various studies that we will detail in the next section.
+\section{Methodology}
+\label{Methodology}
+\subsection{\textbf{Technical approach}}
+Our technical methodology is rooted in the study of Lior and Wool that was outlined in the related work section.
+Initially, our task involved sourcing data pertaining to compromised passwords available online.To study the statistical properties of passwords, and then to train our method, we used Jason’s corpus of leaked passwords as was used in PESrank research[6].	 This corpus contains 1.4 billion pairs of username and password, compiled from multiple leaked corpora.
+Recall that one of our primary targets was to develop a model that leverages specific information to more precisely predict the likelihood of a password being compromised.
+
+To streamline our analysis, we segmented the data based on countries, as alluded to in our related work. The countries chosen for this study are as follows: France, Germany, Spain, China, UK, Scandinavia (comprising Sweden, Denmark, and Norway). For each country, we identified commonly associated email domains. Taking Germany as an example, we noted the '.de' domain. However, it's crucial to highlight that our selection does not necessarily represent the most prevalent email domain within the country. Instead, we prioritized country-specific domains, setting aside globally generic domains like '.com'.
+
+Our decision to focus on these specific countries was driven by the following considerations:
+ \begin{itemize}
+     \item \textbf{Statistical Significance:} Based on data from the Statista website, these countries have a notably high incidence of leaked passwords.
+ \end{itemize}
+\begin{itemize}
+    \item \textbf{Representative Diversity with Broader Cultural Affinities}: We intentionally selected countries that, while distinct, have several global counterparts sharing cultural and linguistic resemblances. This strategy serves a twofold purpose: while it highlights the inherent diversity, it also sets the stage for our follow-up study. In this subsequent research, we plan to explore the possibility that users from countries not directly under study might resonate with one of our chosen countries due to these cultural-linguistic ties.
+\end{itemize}
+\begin{itemize}
+    \item \textbf{Data Prevalence}: An initial assessment of our password dataset indicated that passwords from these nations made up a substantial segment. Our model operates on the premise that every site user will specify their residing country. If the user's country matches one of our pre selected countries, the country-specific model is deployed. Otherwise, the general model is applied. For each of the aforementioned countries, we partitioned the data using an 80-20 split. 
+\end{itemize}
+
+Our hypothesis was that passwords frequently used within a specific country would be ranked lower in that country's model, as multiple users were likely to adopt identical or similar passwords. Concurrently, we ensured that our dataset size remained manageable to prevent any performance degradation. 
+
+\subsubsection{\textbf{Data organization}}
+In subsequent phases, we divided the training data for each country \(i\) into five distinct dimensions: Prefix, Base Word, Suffix, Capitalization, and L33t. After this segmentation, we calculated the occurrence of each sub-password within the training dataset, normalized these values, and computed probabilities. The password segmentation was executed in Python utilizing a dictionary, which is a hash table-based data structure, and followed the PESrank division method. This dictionary stored the sub-passwords as keys and maintained their frequencies as updated values.
+
+Next, for each country \( i \) and each dimension \(j\), s.t \(1<j<=5\), we identified the top 5000 most common sub-passwords. Once again, it was accomplished using a dictionary, along with sorting and slicing techniques. Our objective was to improve estimation accuracy by tweaking all five dimensions. 
+
+For each dimension, we determined the 'tweak factor.' Let's consider a sub-password k from country i in dimension j. We'll denote its probability in this dimension and country as p, and its probability in the same dimension within the general dataset as \(p_0\). If the sub-password isn't present in the general data \(p_0=0\). Let \(\Delta\)\(p\) \(=\) \(p\) - \(p_0\) and consider 1-\(\Delta\)\(p\)\ as the sub-password's tweak factor. Furthermore, the tweak factor for dimension j is defined as the product of the tweak factors for all its associated passwords. The algorithm is shown in \textbf{Figure 3}. Every tweak factor was stored as a value in a dictionary, with the dimension serving as the key.
+
+\subsubsection{\textbf{Incorporating country-specific context into PESrank}}
+Currently, our PESrank model incorporates regional context. When a user inputs a password along with their country, the password is divided into five dimensions. If the country is not among the previously mentioned five countries, the model operates using the primary dataset. However, if the country falls within the predefined five, the model searches for each segment within the corresponding dimension of the country's dataset (comprising the top 5000 sub-passwords per dimension). If all segments are located, the password's probability is computed as the product of these probabilities. This probability is then forwarded to the ESrank algorithm to determine the password's rank, utilizing country-specific data.
+
+In cases where not all segments are located, those segments are redirected to the general model, where each sub-password is scrutinized within the primary dataset. However, given our desire to fine-tune dimensions, if a sub-password 's' is discovered within dimension 'i' with a probability '\(p_0\)', it will undergo normalization using the associated adjustment factor specific to both the dimension and country. Subsequently, the rank will be determined using the ESrank algorithm, which has been trained on the primary dataset. 
+
+\subsubsection{\textbf{Evaluation method}} 
+In order to evaluate our model, we computed for each model the percentage of passwords that would be cracked after a particular number of guesses: in other words, the Cumulative Distribution Function (CDF) of each model. More powerful guessing methods guess a higher percentage of passwords: hence a better model has a CDF that rises more sharply and ultimately reaches a higher percentage.
+To assess the impact of context on PESrank accuracy, we selected the top 100, 1000, and 5000 sub-passwords from each dimension \(j\)\ in country \( i\). We then employed Cumulative Distribution Function (CDF) analysis to compare the performance of the two models on a 5000-password test dataset specific to the country. 
+
+Furthermore, we compared the average ranks in each Cumulative Distribution Function (CDF) to assess algorithm accuracy.
+
+\begin{figure}
+	\centering 
+	\includegraphics[width=0.4\textwidth]{algo.png}
+ \caption{Algorithm to extract tweak factor}
+	\label{fig_mom0}%
+\end{figure}
+\subsection{\textbf{Visual the design And User Experience}}
+Our design approach is rooted in the research discussed in the related work section, primarily the work by UR et al, with certain modifications incorporated.
+\subsubsection{\textbf{Main screen}}
+Within our main interface, users are directed to fill out three fields:
+\begin{enumerate}
+\item[1.] 
+Country - Users select their residing country. The list of available countries was outlined in the earlier segment of the model's implementation.
+\item[2.] 
+User name.
+\item[3.] 
+The chosen password.
+\end{enumerate}
+Upon clicking the 'submit' button, the password strength meter is displayed as a visual bar.
+\begin{itemize}
+    \item \textbf{Visual Bar} - Researchers have tried numerous visual displays of password strength. Using a bar is most common [7]. Therefore in our endeavor to enhance password security awareness, we incorporated a color-coded bar in our password strength meter. Research suggests that when users see even a portion of this bar filled, they often perceive their password as adequately strong [7]. Recognizing this, we aimed to provide an additional visual cue to prompt users to rethink the strength of their password. Drawing from the understanding that emotions can influence decision-making [8], we integrated four emoticons into our meter. These emoticons are color-matched with the bar: red, orange, yellow, and green - the conventional hues used in password strength meters (\textbf{Figure 4}).
+    
+    The initial red emoticon appears for passwords that the model defines as weak, which can be cracked up to \(2^{20}\)  attempts. Subsequent to this, the orange emoticon depicts passwords that can be cracked in t attempts, where: \(t \in (2^{20}, 2^{30}]\), which we attributes as lacking password. This is followed by the appearance of the yellow emoticon, where:\(t \in (2^{30}, 2^{50}]\) which is described as sub-optimal. Lastly, String passwords, attributed by the green emoticon indicates passwords starting from \(2^{50} \).
+    
+\begin{figure}[h]
+\centering 
+\includegraphics[width=0.4\textwidth]{main screen.png}
+\caption{The main screen consists of three fields, a visual bar, and brief feedback that can be expanded if desired by the user, signaled by the information symbol.}
+\label{fig_mom0}%
+\end{figure}
+
+ Our aspiration was to ensure that users, upon seeing an emoticon indicative of a weaker password, would be nudged to reconsider and opt for a stronger alternative.
+We don't impose any specific criteria for passwords entered by users. This approach stems from our site's mission: to enhance the strength of existing user passwords. Consequently, we didn’t want to set a mandatory threshold, ensuring users can refine even the weakest of passwords.In a manner akin to Ur et al., our meter presents feedback in textual form. However, contrasting with Ur et al., which allows users to choose between private or public feedback (based on whether they chose to reveal their passwords), our method offers public, password-specific feedback. This approach is rooted in our platform's objective to assist users in bolstering their passwords and measuring its strength. As a result, we planned to introduce personalized feedback.
+\item \textbf{Text Feedback} - Our feedback provides the user with the following information, as shown in \textbf{Figure 4}: 
+\begin{enumerate}
+\item[1.] 
+The robustness of their password.
+\item[2.] 
+Whether the password contains a word that has been previously compromised, along with the number of individuals who've used it, as mentioned in our developed model.
+\item[3.] 
+A suggestion against using patterns or sequences from the username, especially if there are similarities between the two. 
+\end{enumerate}
+We chose to incorporate the third section based on research indicating that numerous users frequently embed personal details within their passwords [9],[10],[11]. Given this tendency, it became essential to caution users about crafting passwords derived from personal data. As is commonly observed, usernames often encompass elements like names and special dates, and therefore ,inherently carrying personal information.
+    \begin{figure}[h]
+\centering 
+\includegraphics[width=0.4\textwidth]{info.png}
+\caption{Extended feedback regarding the incorporation of personal information into passwords is available. The opportunity for a more comprehensive exploration of this topic becomes accessible when the username and password share a sequence of three or more characters.}
+\label{fig_mom0}%
+\end{figure}
+ Users have the option to click on the info-symbol links adjacent to the feedback for a deeper understanding (\textbf{Figure 5}). Upon selecting the link alongside the first feedback, a message appears advising against the use of commonplace passwords. Similarly, when the link next to the second feedback is clicked, a message emerges suggesting the user opt for a password that isn't rooted in personal information.
+\end{itemize}
+\subsection{\textbf{Suggested Improvements}}
+After the user submits his password and the bar is displayed as was mentioned before, clicking on ‘Make your password stronger’” button will direct the user to a page with three required fields to complete:
+\begin{enumerate}
+\item[1.] 
+Enter your lucky number.
+\item[2.]
+Enter a phrase from a movie or song.
+\item[3.]
+Enter the release year of the selected movie or song.
+\end{enumerate}
+Usually, to prevent users from picking passwords that can easily be cracked by hackers, system administrators adopt password-composition policies (e.g., requiring passwords to contain symbols and using capital letters) [12]. Considering that when passwords contain uppercase letters, digits, and symbols, they are often in predictable locations, in their suggested improvement Ur et al suggested to users to use unexpected locations. We adopted this method partially. Our primary intent was to facilitate users in recalling their passwords more effectively. Thus, instead of suggesting random characters and numbers, we chose to provide recommendations rooted in personal details. Yet, we were keenly aware of the risks associated with utilizing personal information directly in passwords. This prompted our selection of these specific questions.
+ \begin{itemize}
+     \item The "lucky number" is a memorable digit, but it's not necessarily a number that is part of a username like birth date.
+ \end{itemize}
+\begin{itemize}
+    \item Concerning the movie line, we extract the initial letter of each word in the excerpt. This approach is a blend of personal connection and preserving privacy.
+\end{itemize}
+ \begin{itemize}
+     \item Lastly, the release year of the film serves as a datum the user can easily recall, but it's not directly attributable to them, unlike details such as their birth year.
+ \end{itemize}
+     \begin{figure}[h]
+\centering 
+\includegraphics[width=0.4\textwidth]{process.png}
+\caption{Enhancements Page: The original password used was '123', the fortunate number is '3', and the chosen phrase is "I am your father," a quote from Star Wars: Episode V, which premiered in 1980.}
+\label{fig_mom0}%
+\end{figure}
+We generate this suggested improvement as follows : Initially, we extracted the starting letter from each word of the movie sentence provided by the user and combined them to form a single word. We then applied a code to randomly capitalize some letters while keeping others in lowercase. Then, we padded the initials string with the last two digits of the year the user provided. Next, we randomly inserted two symbols to the password. In the third and last step we entered the lucky number also randomly.
+
+After completing the fields and clicking 'submit,' users receive a suggested password and can choose enhancements. While they can pick which part of the suggested password to adopt, they aren't informed about the enhancement value. Clicking 'show creation process' reveals three steps to create the strong password, each with an explanatory note and a strength score, as shown in \textbf{Figure 6}. The score is determined by the PESrank model [3].
+
+\subsubsection{\textbf{Color Palette Designs}}
+We opted to design our website using cool hues, primarily blue and green. Previous studies have demonstrated that blue universally resonates with feelings of tranquility and calmness across cultures [13, 14]. In the realm of advertising, blue is linked to trust [15] and proficiency [16]. Additionally, positive attributes such as positivity, playfulness, and trustworthiness tend to feature more green [17].
+
+\section{Results}
+To evaluate the accuracy of our model, we implemented a procedure wherein, for each country \(i\in\{{'China', 'France', 'Germany', 'UK', 'Spain'}\}\) and each dimension \(j\), we chose the \(n\in\{100, 500, 5000\}\) highest rated sub-passwords. Afterward, we randomly selected 5000 passwords from the test dataset of the corresponding country \( i\). As mentioned earlier, we employed Cumulative Distribution Function (CDF) analysis to compare the performance of the two models on a 5000-password test dataset specific to the country. 
+
+The CDF curves illustrate the proportion of passwords that can be successfully cracked within up to \( r\) attempts, with \(r\) represented on a logarithmic scale.
+
+\begin{figure}[h]
+\centering 
+\includegraphics[width=0.5\textwidth]{china_main.png}
+\caption{CDF for 5000 passwords from China.}
+\label{fig_mom0}%
+\end{figure}
+
+\begin{figure}[h]
+\centering 
+\includegraphics[width=0.5\textwidth]{uk_main.png}
+\caption{CDF for 5000 passwords from UK.}
+\label{fig_mom0}%
+\end{figure}
+
+\begin{figure}[h]
+\centering 
+\includegraphics[width=0.5\textwidth]{france_main.png}
+\caption{CDF for 5000 passwords from France.}
+\label{fig_mom0}%
+\end{figure}
+
+Given the potential for the context-aware model to require specific dataset searches and, in the worst-case scenario, transition to the primary dataset, it is possible that it may exhibit longer running times compared to the context-less PESrank. To manage this, we made the choice to utilize a dataset comprising the top 5000 highest ranked sub-passwords for each dimension. Additionally, we considered memory constraints to ensure that excessive memory usage was avoided.
+
+For analyzing the model's performance, we calculated the average execution time for both context-less and context-aware models using 5000 randomly selected passwords from each country's test dataset. To address potential execution time variations influenced by factors like system load, we conducted ten runs for each model. To compute the average, for each run, we summed the running times for 5000 passwords, divided the total by 5000, and then calculated the mean of the ten runs.
+
+\begin{table}[h!]
+\centering
+ \begin{tabular}{|p{1.4cm}||p{1.4cm}|p{1.4cm}|p{2.4cm}|} 
+ \hline
+ country & without context & with context & difference (with-without) \\ [0.5ex] 
+ \hline\hline
+ France  & 0.007387 & 0.007705 & 0.000318 \\ 
+ Germany & 0.004972 & 0.007323 & 0.002351 \\
+ China & 0.023566 & 0.024945 & 0.001379 \\
+ Spain & 0.00899 & 0.009069 & 7.9e-05 \\
+ UK & 0.004658 & 0.004164 & -0.000494 \\ [1ex] 
+ \hline
+ \end{tabular}
+\end{table}
+\section{Discussion}
+\label{Discussion}
+From the graphical representation, there's a discernible uptick in performance with our model that utilizes personal information. A graph positioned higher and more towards the left indicates superior model efficacy: a higher vertical placement corresponds to an increased percentage of deciphered passwords, while a leftward shift indicates the speed at which these passwords were cracked.
+ 
+Concerning execution times, our model's duration was largely on par with the standard model, occasionally even surpassing it in speed. This could be attributed to the introduction of additional data, which can prolong the password search process. Notably, the speed difference between passwords decrypted faster in our context-inclusive model versus the generic one was marginal. It's evident that England's performance was the sole marked improvement, with this uptick being the most significant among the groups.
+ 
+However, the variances in execution times are minute, leading one to infer that the disparities might be inconsequential Comparative results between the Netherlands and Germany will be elaborated upon in Future work.
+\subsection{\textbf{Limitations}}
+Firstly, PPESrank relies heavily on the quality and diversity of data it uses for training. If the data lacks diversity or doesn't capture emerging password trends, then it might not work as well. Secondly, smart attackers may try to trick PPESrank by using its strengths and turning it into vulnerabilities. Lastly, PPESrank supports the ability to check for the strength of a password in a certain country to get more accurate feedback. However, the challenge lies in the lack of sufficient data for many countries around the world, hindering our ability to accurately represent the influence of cultural and linguistic habits on password creation.
+
+
+\subsection{\textbf{Future Work}}
+ Firstly, on the front-end, we plan on improving our website based on the result we will get from the User-study. In addition, smart attackers might try to attack our website to get hold of sensitive information, thus reducing the quality of the passwords we provide. so Looking ahead, we can combine our project with other security methods like data encryption to add an additional layer of security for the user. Secondly, the results reveal that when contrasting a password from the Netherlands with German data, there's a noticeable improvement, likely due to shared cultural patterns, as we highlighted (\textbf{Figure 8}). In light of this, we intend to design a machine learning algorithm capable of aligning a user with a model trained on data from a culturally proximate country. This should improve the accuracy of our systems. 
+
+ \begin{figure}[h]
+\centering 
+\includegraphics[width=0.5\textwidth]{Netherlands_5000_germany.png}
+\caption{CDF for 5000 passwords from Netherlands on Germany trained model.}
+\label{fig_mom0}%
+\end{figure}
+
+ Moreover, by refining this approach within individual countries, provided there's ample data, we could achieve even greater precision. Another idea is to develop a similar machine learning algorithm to the one mentioned above that has the ability to match users to models based on linguistic aspects instead of cultural ones. Both of these ideas could contribute to a big improvement in the performances of our models. 
+
+\section{Contribution}
+Initially, we collectively reviewed pertinent research papers, distilling foundational concepts and valuable insights to shape our extension's workflow. We also convened discussions to clarify the objectives of our project and strategize their execution.
+ 
+As the project progressed, responsibilities were split into two primary tasks:
+ 
+\begin{itemize}
+    \item \textbf{Back-end Development} -  This intricate segment was a collaborative effort by all three of us. We faced numerous challenges and, at one point, sought assistance from Liron David, the author of the PESrank article, to procure their model's code. Although we made preliminary preparations, while drafting the code, each team member proposed a few model alterations, culminating in the final outcome we've detailed.
+    \item \textbf{Front-end Development} - Goni and Rani spearheaded the website construction. Assaf played a role by providing feedback, referencing relevant studies and diverse information sources. Additionally, Goni managed the integration of the model with the site and elucidated the variances in the results.
+    \item \textbf{User-Study} - Assaf took the lead. As for the Report, it was a shared endeavor: each of us contributed to various sections while mutually reviewing and refining the content
+\end{itemize}
+\section{References}
+\label{References}
+\begin{enumerate}
+\item [1.]
+B. Ur, F. Alfieri, M. Aung, L. Bauer, N. Christin, J. Colnago, L. F. Cranor, H. Dixon,
+P. Emami Naeini, H. Habib, et al. the design and evaluation of a data-driven password meter. In Proceedings of CHI, 2017.
+\item [2.]
+K. Mori, T. Watanabe, Y. Zhou, A. A. Hasegawa, M. Akiyama, and T. Mori. Comparative analysis of three language spheres: Are linguistic and cultural differences reflected in password selection habits? In Proceedings of EuroUSEC, 2019.
+\item [3.]
+L. David and A. Wool. An explainable online password strength estimator. In Proceedings of ESORICS, 2021.
+\item [4.]
+J. Bonneau, "The science of guessing: Analyzing an anonymized corpus of 70 million passwords", Proc. IEEE Symp. Security Privacy, pp. 538-552, May 2012.
+\item [5.]
+A. Narayanan and V. Shmatikov, "Fast dictionary attacks on passwords using time-space tradeoff", Proc. ACM CCS, pp. 364-372, 2005
+\item [6.]
+Jason. 1.4 billion leaked passwords in over 40GB of data (2019) 
+\item [7.]
+D. Malone and K. Maher, "Investigating the distribution of password choices", Proc. ACM WWW, pp. 310, 2012.
+\item [8.]
+Ur, B., Kelley, P. G., Komanduri, S., Lee, J., Maass, M., Mazurek, M. L., Cranor, L. F. (2012). How does your password measure up? The effect of strength meters on password creation. In 21st USENIX security symposium (USENIX Security 12) (pp. 65-80).
+\item [9.]
+Jinyun Duan, Xiaotong Xia, Lyn M. Van Swol, Emoticons' influence on advice taking, Computers in Human Behavior, Volume 79, 2018, Pages 53-58,
+\item [10.]
+Houshmand, S., Aggarwal, S.: Using personal information for targeted attacks in grammar based probabilistic password cracking. In: IFIP Advances in Information and Communication Technology, vol. 511 (2017)
+\item [11.]
+Li, Y., Wang, H., Sun, K.: Personal information in passwords and its security
+implications. IEEE Trans. Inf. Forensics Secur. 12(10), 2320–2333 (2017)
+ \item [12.]
+Wang, D., Zhang, Z., Wang, P., Yan, J., Huang, X.: Targeted online password guessing: an underestimated threat. In: Proceedings of the 2016 ACM SIGSAC Conference on Computer and Communications Security, pp. 1242–1254 (2016)
+\item [13.]
+Komanduri, S., Shay, R., Kelley, P. G., Mazurek, M. L., Bauer, L., Christin, N., Cranor, L. F., and Egelman, S. (2011). Of Passwords and People: Measuring the Effect of Password-Composition Policies.
+\item [14.] Dianne Cyr, Milena Head, and Hector Larios. 2010. Colour appeal in website design within and across cultures: A multi-method evaluation. International journal of human-computer studies 68, 1 (2010), 1–21		
+
+\item [15.] Thomas J Madden, Kelly Hewett, and Martin S Roth. 2000. Managing images in different cultures: A cross-national study of color meanings and preferences. Journal of international marketing 8, 4 (2000), 90–107.	
+				
+\item [16.] Dianne Cyr, Milena Head, and Hector Larios. 2010. Colour appeal in website design within and across cultures: A multi-method evaluation. International journal of human-computer studies 68, 1 (2010), 1–21.
+
+\item[17.] Lauren I Labrecque and George R Milne. 2012. Exciting red and competent blue: the importance of color in marketing. Journal of the Academy of Marketing Science 40, 5 (2012), 711–727.	 				
+\end{enumerate}
+\end{document}
